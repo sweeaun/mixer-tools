@@ -68,7 +68,7 @@ func (b *Builder) ReadVersions() error {
 	b.UpstreamVer = strings.TrimSpace(string(ver))
 	b.UpstreamVer = strings.Replace(b.UpstreamVer, "\n", "", -1)
 
-	// Deprecate '.clearversion' --> 'upstreamurl'
+	// Deprecate '.clearurl' --> 'upstreamurl'
 	if _, err = os.Stat(filepath.Join(b.Config.Builder.VersionPath, ".clearurl")); err == nil {
 		b.UpstreamURLFile = ".clearurl"
 		fmt.Println("Warning: '.clearurl' has been deprecated. Please rename file to 'upstreamurl'")
