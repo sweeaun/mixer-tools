@@ -16,6 +16,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/BurntSushi/toml"
+	"github.com/clearlinux/mixer-tools/config"
 	"github.com/clearlinux/mixer-tools/helpers"
 	"github.com/pkg/errors"
 )
@@ -380,7 +382,7 @@ func initRPMDB(chrootDir string) error {
 	)
 }
 
-func buildOsCore(packagerCmd []string, chrootDir, version string) error {
+func buildOsCore(packagerCmd []string, chrootDir, version string, config config.MixConfig) error {
 	err := initRPMDB(chrootDir)
 	if err != nil {
 		return err
@@ -394,7 +396,7 @@ func buildOsCore(packagerCmd []string, chrootDir, version string) error {
 		return err
 	}
 
-	if err := fixOSRelease(filepath.Join(chrootDir, "usr/lib/os-release"), version); err != nil {
+	if err := fixOSRelease(filepath.Join(chrootDir, "usr/lib/os-release"), version, config); err != nil {
 		return errors.Wrap(err, "couldn't fix os-release file")
 	}
 
@@ -551,7 +553,7 @@ func buildFullChroot(b *Builder, set *bundleSet, packagerCmd []string, buildVers
 		// special handling for os-core
 		if bundle.Name == "os-core" {
 			fmt.Println("... building special os-core content")
-			if err := buildOsCore(packagerCmd, fullDir, version); err != nil {
+			if err := buildOsCore(packagerCmd, fullDir, version, b.Config); err != nil {
 				return err
 			}
 		}
@@ -877,7 +879,11 @@ func createVersionsFile(baseDir string, packagerCmd []string) error {
 	return w.Flush()
 }
 
-func fixOSRelease(filename, version string) error {
+func fixOSRelease(filename, version string, config config.MixConfig) error {
+
+	// osIDMap is a map of os-identication
+	type osIDMap map[string]string
+
 	f, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -886,20 +892,59 @@ func fixOSRelease(filename, version string) error {
 		_ = f.Close()
 	}()
 
-	// TODO: If this is a mix, NAME and ID should probably change too. Create a section in
-	// configuration that will be used as reference to fill this.
-	// TODO: If this is a mix, add extra field for keeping track of the Clear Linux version
-	// used. Maybe also put the UPSTREAM URL, so we are ready to support mixes of mixes.
-	//
-	// See also: https://github.com/clearlinux/mixer-tools/issues/113
+	// Setup the osIDMap
+	osID := make(osIDMap)
+
+	var buf bytes.Buffer
+	var strMatch string
+
+	if err := toml.NewEncoder(&buf).Encode(config.Os); err != nil {
+		return err
+	}
+
+	// Prepare map table with TOML keys after encode which can be
+	// used for apple to apple comparison with default os-release file
+	re := regexp.MustCompile(`.*\".*\"`)
+	matches := re.FindAllStringSubmatch(buf.String(), -1)
+	for _, s := range matches {
+
+		//Remove " in string
+		strMatch = strings.Replace(s[0], "\"", "", -1)
+		//Split the string with "="
+		strSplit := strings.Split(strMatch, "=")
+		//Remove space in string
+		strSplit[0] = strings.Replace(strSplit[0], " ", "", -1)
+		strSplit[1] = strings.Replace(strSplit[1], " ", "", 1)
+		//Assign value into map table
+		osID[strSplit[0]] = strSplit[1]
+	}
+
+	// Add VERION_ID into map before os-release file modification is performed
+	osID["VERSION_ID"] = version
 
 	var newBuf bytes.Buffer
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		text := scanner.Text()
-		if strings.HasPrefix(text, "VERSION_ID=") {
-			text = "VERSION_ID=" + version
+
+		//Perform searching for os identification params in os-release file and
+		//update it accordingly based on builder.conf [Os] section
+		for key, value := range osID {
+
+			key = key + "="
+
+			// Looking for matching
+			if strings.HasPrefix(text, key) {
+
+				// No change if <NoChange> string found
+				if value != "<NoChange>" {
+
+					text = key + "\"" + value + "\""
+				}
+				break
+			}
 		}
+
 		_, _ = fmt.Fprintln(&newBuf, text)
 	}
 

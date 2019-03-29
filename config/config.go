@@ -34,6 +34,7 @@ type MixConfig struct {
 	Swupd   swupdConf
 	Server  serverConf
 	Mixer   mixerConf
+	Os      osConf
 
 	/* hidden properties */
 	filename string
@@ -69,6 +70,19 @@ type mixerConf struct {
 	LocalRepoDir   string `required:"false" mount:"true" toml:"LOCAL_REPO_DIR"`
 	LocalRPMDir    string `required:"false" mount:"true" toml:"LOCAL_RPM_DIR"`
 	DockerImgPath  string `required:"false" toml:"DOCKER_IMAGE_PATH"`
+}
+
+type osConf struct {
+	Name             string `required:"false" toml:"NAME"`
+	Version          string `required:"false" toml:"VERSION"`
+	ID               string `required:"false" toml:"ID"`
+	IDLike           string `required:"false" toml:"ID_LIKE"`
+	PrettyName       string `required:"false" toml:"PRETTY_NAME"`
+	AnsiColor        string `required:"false" toml:"ANSI_COLOR"`
+	HomeURL          string `required:"false" toml:"HOME_URL"`
+	SupportURL       string `required:"false" toml:"SUPPORT_URL"`
+	BugReportURL     string `required:"false" toml:"BUG_REPORT_URL"`
+	PrivacyPolicyURL string `required:"false" toml:"PRIVACY_POLICY_URL"`
 }
 
 // LoadDefaults sets sane values for the config properties
@@ -107,6 +121,18 @@ func (config *MixConfig) LoadDefaultsForPath(path string) {
 
 	config.Mixer.LocalRPMDir = filepath.Join(path, "local-rpms")
 	config.Mixer.LocalRepoDir = filepath.Join(path, "local-yum")
+
+	// [Os]
+	config.Os.Name = "<NoChange>"
+	config.Os.Version = "<NoChange>"
+	config.Os.ID = "<NoChange>"
+	config.Os.IDLike = "<NoChange>"
+	config.Os.PrettyName = "<NoChange>"
+	config.Os.AnsiColor = "<NoChange>"
+	config.Os.HomeURL = "<NoChange>"
+	config.Os.SupportURL = "<NoChange>"
+	config.Os.BugReportURL = "<NoChange>"
+	config.Os.PrivacyPolicyURL = "<NoChange>"
 
 	config.version = CurrentConfigVersion
 	config.filename = filepath.Join(path, "builder.conf")

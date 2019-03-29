@@ -183,6 +183,17 @@ func (config *MixConfig) parseLegacy() error {
 		{`^LOCAL_REPO_DIR\s*=\s*`, &config.Mixer.LocalRepoDir, false},
 		{`^LOCAL_RPM_DIR\s*=\s*`, &config.Mixer.LocalRPMDir, false},
 		{`^DOCKER_IMAGE_PATH\s*=\s*`, &config.Mixer.DockerImgPath, false},
+		// [Os]
+		{`^NAME\s*=\s*`, &config.Os.Name, false},
+		{`^VERSION\s*=\s*`, &config.Os.Version, false},
+		{`^ID\s*=\s*`, &config.Os.ID, false},
+		{`^ID_LIKE\s*=\s*`, &config.Os.IDLike, false},
+		{`^PRETTY_NAME\s*=\s*`, &config.Os.PrettyName, false},
+		{`^ANSI_COLOR\s*=\s*`, &config.Os.AnsiColor, false},
+		{`^HOME_URL\s*=\s*`, &config.Os.HomeURL, false},
+		{`^SUPPORT_URL\s*=\s*`, &config.Os.SupportURL, false},
+		{`^BUG_REPORT_URL\s*=\s*`, &config.Os.BugReportURL, false},
+		{`^PRIVACY_POLICY_URL\s*=\s*`, &config.Os.PrivacyPolicyURL, false},
 	}
 
 	for _, h := range fields {
